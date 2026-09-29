@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { obtenerCodigoYopmail } from '../utils/yopmail'
 import solicitantes from '../fixtures/solicitantes.json'
+import path from 'path'
 
 const remitenteEsperado = 'noreply@familia.pr.gov'
 const regexOtp = /es:\s*(\d{4,8})/i
@@ -20,25 +21,42 @@ for (const persona of solicitantes) {
       await page.getByRole('button', { name: 'Continuar' }).click()
     })
 
-    await test.step('Completar validación con Inteligencia Artificial', async () => {
+      await test.step('Completar validación con Inteligencia Artificial', async () => {
       await page.locator('[href="/Applicant/ArtificialIntelligence/"]').click()
       await page.locator('[name="ArtificialIntelligenceValidationModel.IdentityEvidenceId"]').selectOption({
         label: 'Certificado de Nacimiento'
       })
 
-      await page.setInputFiles('#FileUrlInput', 'fixtures/Evidencia.pdf')
-      await expect(page.locator('#FileUrlInput')).toHaveJSProperty('files.length', 1)
-      await page.waitForTimeout(10000)
-      const btnContinuarIA = page.getByRole('button', { name: 'Continuar' })
-      await expect(btnContinuarIA).toBeEnabled({ timeout: 20000 })
-      await btnContinuarIA.click()
+      // Si fixtures está en la raíz y tu test dentro de /tests:
+      const filePath = path.resolve(__dirname, '../fixtures/Evidencia.pdf');
+
+      const inputElement = page.locator('#FileUrlInput');
+      await inputElement.setInputFiles(filePath);
+      await inputElement.dispatchEvent('change');
+      await expect(inputElement).toHaveJSProperty('files.length', 1)
+      await page.waitForTimeout(20000);
+
+      // Localizador específico: busca el botón 'Continuar' que esté realmente visible en pantalla
+      const btnContinuarIA = page.locator('button, input[type="submit"]').filter({ hasText: /^Continuar$/i }).locator('visible=true').first();
+
+      // Asegurar que esté visible y en pantalla
+      await btnContinuarIA.scrollIntoViewIfNeeded();
+      await expect(btnContinuarIA).toBeEnabled({ timeout: 20000 });
+
+      // Clic directo con fallback por JavaScript si la capa visual no recibe el clic nativo
+      try {
+        await btnContinuarIA.click({ timeout: 5000 });
+      } catch {
+        console.log('Fallo el clic nativo, forzando clic mediante JavaScript...');
+        await btnContinuarIA.evaluate((el: HTMLElement) => el.click());
+      }
 
       await expect(
-        page.getByText('Su proceso de validación fue completado exitosamente')
-      ).toBeVisible({ timeout: 120000 })
+        page.getByText(/validaci[oó]n fue completado exitosamente/i)
+      ).toBeVisible({ timeout: 120000 });
 
-      await expect(page.getByText('Primer nombre')).toBeVisible()
-    })
+      await expect(page.getByText('Primer nombre')).toBeVisible();
+    });
 
     await test.step('Completar formulario de datos personales', async () => {
       await page.locator('#Name').fill(persona.nombre)

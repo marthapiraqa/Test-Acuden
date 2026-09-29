@@ -13,7 +13,7 @@ const normalizar = (texto) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g,
 const randomElement = (arr) => arr[Math.floor(Math.random() * arr.length)]
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
 
-const dataset = Array.from({ length: 2 }, (_, i) => {
+const dataset = Array.from({ length: 1 }, (_, i) => {
   const index = i + 1
   const dia = String(randomInt(1, 28)).padStart(2, '0')
   const mes = String(randomInt(1, 12)).padStart(2, '0')

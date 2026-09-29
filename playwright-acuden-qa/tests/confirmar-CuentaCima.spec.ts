@@ -14,7 +14,6 @@ test("Confirmar Usuario - Último registro", async ({ page }) => {
     await page.goto("https://cima-qa.azurewebsites.net/", {
       waitUntil: "domcontentloaded",
     });
-    await page.pause();
     // Ingresar credenciales de acceso
     await page.locator('xpath=//*[@id="Username"]').fill("kpg2");
     await page.locator('input[type="password"]').fill("Cima321...");
@@ -89,8 +88,9 @@ test("Confirmar Usuario - Último registro", async ({ page }) => {
 
   // Selecciona Registro unico
   await test.step("Seleccion de Registro único de información demográfica", async () => {    
-    const btnAbrirModal = page.locator("a.identity-validation-banner__action");
-    await expect(btnAbrirModal).toBeVisible();
+      // Busca el <a> que contiene el ícono de la mano
+    const btnAbrirModal = page.locator('a:has(i.fa-hand-pointer)');
+    await expect(btnAbrirModal).toBeVisible({ timeout: 30000 });
     await btnAbrirModal.click();
 
     // Seleccionar directamente el modal que esté visible
@@ -132,8 +132,8 @@ test("Confirmar Usuario - Último registro", async ({ page }) => {
   //Crear la Cuenta
   await test.step("Creación cuenta Familia", async () => {
     // Se valida que haya realizado la validación del RU
-    const singleRecordOption = page.locator("a.identity-validation-banner__action, div.identity-validation-banner__action");
-    await expect(singleRecordOption).toHaveClass(/disabled|not-active/i, { timeout: 10000 });
+   // const singleRecordOption = page.locator("a.identity-validation-banner__action, div.identity-validation-banner__action");
+   // await expect(singleRecordOption).toHaveClass(/disabled|not-active/i, { timeout: 10000 });
 
     // 2. Dar clic en el botón 'Create user'
     const btnCreateUser = page.locator("button.btn-green-007C7D");

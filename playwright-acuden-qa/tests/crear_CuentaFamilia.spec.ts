@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test'
+import { fakerES as faker } from '@faker-js/faker'
 import { obtenerCodigoYopmail } from '../utils/yopmail'
 import solicitantes from '../fixtures/solicitantes.json'
+import path from 'path'
+
 
 const remitenteEsperado = 'noreply@familia.pr.gov'
 const regexOtp = /es:\s*(\d{4,8})/i
@@ -10,6 +13,9 @@ test.use({ launchOptions: { slowMo: 800 } });
 for (const persona of solicitantes) {
   test(`Flujo Completo Crear Cuenta Familia ${persona.id}: ${persona.nombre} ${persona.apellido}`, async ({ page, context }) => {
     test.setTimeout(360000)
+
+    const fakerNombre = faker.person.firstName();
+    const fakerApellido = faker.person.lastName();
 
     const correoYopmail = `${persona.correoPrefix}`
     const correoYopmailCompleto = `${correoYopmail}@yopmail.com`
@@ -35,9 +41,14 @@ for (const persona of solicitantes) {
         label: 'Certificado de Nacimiento'
       })
 
-      await page.setInputFiles('#FileUrlInput', 'fixtures/FotoFamilia7.jpg')
+      // Si fixtures está en la raíz y tu test dentro de /tests:
+// Si fixtures está en la raíz y tu test dentro de /tests:
+      const filePath = path.resolve(__dirname, '../fixtures/FotoFamilia7.jpg');
+      //const filePath = path.resolve(__dirname, '../fixtures/Evidencia.pdf');
+
+      await page.setInputFiles('#FileUrlInput', filePath);
       await expect(page.locator('#FileUrlInput')).toHaveJSProperty('files.length', 1)
-      await page.waitForTimeout(10000)
+      await page.waitForTimeout(20000)
       const btnContinuarIA = page.getByRole('button', { name: 'Continuar' })
       await expect(btnContinuarIA).toBeEnabled({ timeout: 20000 })
       await btnContinuarIA.click()
@@ -55,13 +66,13 @@ for (const persona of solicitantes) {
       const nombreField = page.locator('#Name')
       const nombreActual = await nombreField.inputValue()
       if (nombreActual.trim() === '') {
-        await nombreField.fill(persona.nombre)
+        await nombreField.fill(fakerNombre)
       }
       
       const apellidoField = page.locator('#LastName')
       const apellidoActual = await apellidoField.inputValue()
       if (apellidoActual.trim() === '') {
-        await apellidoField.fill(persona.apellido)
+        await apellidoField.fill(fakerApellido)
       } 
 
       //OJO VALIDAR CUANDO CAMBIA IDIOMA
@@ -126,13 +137,41 @@ for (const persona of solicitantes) {
    
     // Se crea la Solicitud
     await test.step('Enviar y finalizar la solicitud', async () => {        
-        const btnEnviar = page.getByRole('button', { name: 'Enviar' })
-        await expect(btnEnviar).toBeVisible({ timeout: 30000 })
-        await expect(btnEnviar).toBeEnabled({ timeout: 30000 })
+        const textoSometida = page.getByText('Solicitud de Cuenta Sometida')
+
+        let yaSometida = false
+        try {
+            // Espera activa de 10s usando expect
+            await expect(textoSometida).toBeVisible({ timeout: 10000 })
+            yaSometida = true
+        } catch {
+            yaSometida = false
+        }
+
+        if (yaSometida) {
+            console.log('ACUDEN DIGITAL - Solicitud Creada Nuevo')
+            return
+        }
+
+        // Si no existe, valida y marca el radio "Ninguno de los anteriores"
+        const radioNinguno = page.locator('#related_0')
+        await expect(radioNinguno).toBeVisible({ timeout: 10000 })
+        if (!(await radioNinguno.isChecked())) {
+            await radioNinguno.check({ force: true })
+        }
+
+        // Espera 5 segundos
+        await page.waitForTimeout(5000)
+
+        // Clic en el botón Enviar
+        const btnEnviar = page.locator('button:has-text("Enviar"):has(i.fa-chevron-right)')
+        await expect(btnEnviar).toBeVisible({ timeout: 10000 })
         await btnEnviar.click()
-        await expect(page.getByText('Solicitud de Cuenta Sometida')).toBeVisible({ timeout: 30000 }) 
-        await console.log('ACUDEN DIGITAL - Solicitud Creada')
-    })
+
+        // Confirmación final
+        await expect(textoSometida).toBeVisible({ timeout: 120000 }) 
+        console.log('ACUDEN DIGITAL - Solicitud Creada Coincidencia')
+    })  
   
     // ==========================================
     // FASE 2: CONFIRMAR USUARIO EN CIMA
@@ -218,70 +257,74 @@ for (const persona of solicitantes) {
       await page.waitForLoadState("networkidle");
     });
 
-    // Selecciona Registro unico
-    await test.step("Seleccion de Registro único de información demográfica", async () => {    
-      const btnAbrirModal = page.locator("a.identity-validation-banner__action");
-      await expect(btnAbrirModal).toBeVisible();
-      await btnAbrirModal.click();
+      // Selecciona Registro unico
+  await test.step("Seleccion de Registro único de información demográfica", async () => {    
+      // Busca el <a> que contiene el ícono de la mano
+    const btnAbrirModal = page.locator('a:has(i.fa-hand-pointer)');
+    await expect(btnAbrirModal).toBeVisible({ timeout: 30000 });
+    await btnAbrirModal.click();
 
-      // Espera a que el modal que esté visible
-      const modalDemografico = page.locator(".modal-content:visible");
-      await expect(modalDemografico).toBeVisible({ timeout: 10000 });
+    // Seleccionar directamente el modal que esté visible
+    const modalDemografico = page.locator(".modal-content:visible");
+    await expect(modalDemografico).toBeVisible({ timeout: 10000 });
 
-      // Navegar a la última página dentro del popup
-      const btnUltimaPagina = modalDemografico.locator("li.page-item:has(i.bi-chevron-double-right)");
-      if (await btnUltimaPagina.isVisible()) {
-        const estaDeshabilitado = await btnUltimaPagina.evaluate((el) =>
-          el.classList.contains("disabled")
-        );
-        if (!estaDeshabilitado) {
-          await btnUltimaPagina.locator("a.page-link").click();
-          await page.waitForLoadState("networkidle");
-        }
+    // Navegar a la última página dentro del popup
+    const btnUltimaPagina = modalDemografico.locator("li.page-item:has(i.bi-chevron-double-right)");
+    if (await btnUltimaPagina.isVisible()) {
+      const estaDeshabilitado = await btnUltimaPagina.evaluate((el) =>
+        el.classList.contains("disabled")
+      );
+      if (!estaDeshabilitado) {
+        await btnUltimaPagina.locator("a.page-link").click();
+        await page.waitForLoadState("networkidle");
       }
+    }
 
-      // Ubicar fila con 'Persona no encontrada' y marcar casilla
-      const filaObjetivo = modalDemografico.locator("tbody tr").filter({
-        hasText: /Persona no encontrada|Person not found/i,
-      }).last();
+    // Ubicar fila con 'Persona no encontrada' y marcar casilla
+    const filaObjetivo = modalDemografico.locator("tbody tr").filter({
+      hasText: /Persona no encontrada|Person not found/i,
+    }).last();
 
-      await expect(filaObjetivo).toBeVisible({ timeout: 10000 });
-      const checkbox = filaObjetivo.locator('input[type="checkbox"]');
-      await checkbox.check({ force: true });
+    await expect(filaObjetivo).toBeVisible({ timeout: 10000 });
+    const checkbox = filaObjetivo.locator('input[type="checkbox"]');
+    await checkbox.check({ force: true });
 
-      // Clic en el botón Continuar dentro del RU
-      const btnContinuar = modalDemografico.locator("button.btn-primary");
-      await expect(btnContinuar).not.toHaveClass(/not-active/, { timeout: 10000 });
-      await expect(btnContinuar).toBeEnabled({ timeout: 10000 });
+    // Clic en el botón Continuar dentro del RU
+    const btnContinuar = modalDemografico.locator("button.btn-primary");
+    await expect(btnContinuar).not.toHaveClass(/not-active/, { timeout: 10000 });
+    await expect(btnContinuar).toBeEnabled({ timeout: 10000 });
 
-      // Hacer clic una vez habilitado el boton Continuar
-      await btnContinuar.click();
-      await page.waitForLoadState("networkidle");
-    });
+    // Hacer clic una vez habilitado el boton Continuar
+    await btnContinuar.click();
 
-    // Crear la Cuenta
-    await test.step("Creación cuenta Familia", async () => {
-      // Se valida que haya realizado la validación del RU
-      //const singleRecordOption = page.locator("a.identity-validation-banner__action, div.identity-validation-banner__action");
-      //await expect(singleRecordOption).toHaveClass(/disabled|not-active/i, { timeout: 10000 });
+    await page.waitForLoadState("networkidle");
+  });
 
-      // Se selecciona 'Crear Usuario'
-      const btnCreateUser = page.locator("button.btn-green-007C7D");
-      await expect(btnCreateUser).toBeVisible({ timeout: 10000 });
-      await btnCreateUser.click();
+  //Crear la Cuenta
+  await test.step("Creación cuenta Familia", async () => {
+    // Se valida que haya realizado la validación del RU
+   // const singleRecordOption = page.locator("a.identity-validation-banner__action, div.identity-validation-banner__action");
+   // await expect(singleRecordOption).toHaveClass(/disabled|not-active/i, { timeout: 10000 });
 
-      // Se selecciona Aceptar en el popup de confirmación
-      const primerModal = page.locator(".modal.show, .modal-content:visible").first();
-      await expect(primerModal).toBeVisible({ timeout: 10000 });
-      await primerModal.click();
+    // 2. Dar clic en el botón 'Create user'
+    const btnCreateUser = page.locator("button.btn-green-007C7D");
+    await expect(btnCreateUser).toBeVisible({ timeout: 10000 });
+    await btnCreateUser.click();
 
-      // Se selecciona Acpetar en el popup de confirmación final
-      const segundoModal = page.locator(".modal.show, .modal-content:visible").first();
-      await expect(segundoModal).toBeVisible({ timeout: 10000 });
-      await segundoModal.click();
-      await page.waitForLoadState("networkidle");
+    // 3. Primer popup de confirmación: hacer clic en Accept
+    const primerModal = page.locator(".modal.show, .modal-content:visible").first();
+    await expect(primerModal).toBeVisible({ timeout: 10000 });
+    await primerModal.click();
 
-      console.log("CIMA - Creacion de Cuenta Exitosa");
-    });
+    // 4. Segundo popup (éxito o confirmación final): hacer clic en Accept
+    const segundoModal = page.locator(".modal.show, .modal-content:visible").first();
+    await expect(segundoModal).toBeVisible({ timeout: 10000 });
+    await segundoModal.click();
+
+    // Esperar a que se procese la solicitud en red
+    await page.waitForLoadState("networkidle");
+
+    console.log("Creacion de cuenta exitosa #000");
+  });
   });
 }
