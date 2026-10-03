@@ -11,14 +11,21 @@ const regexOtp = /es:\s*(\d{4,8})/i
 test.use({ launchOptions: { slowMo: 800 } });
 
 for (const persona of solicitantes) {
-  test(`Flujo Completo Crear Cuenta Familia ${persona.id}: ${persona.nombre} ${persona.apellido}`, async ({ page, context }) => {
+  test(`Flujo Completo Crear Cuenta Familia : ${persona.id}`, async ({ page, context }) => {
     test.setTimeout(360000)
 
-    const fakerNombre = faker.person.firstName();
-    const fakerApellido = faker.person.lastName();
+    const fakerNombre = faker.person.firstName().trim().split(/\s+/)[0];
+    const fakerApellido = faker.person.lastName().trim().split(/\s+/)[0];
+    const fakerNombre2 = faker.person.middleName().trim().split(/\s+/)[0];
+    const fakerApellido2 = faker.person.lastName().trim().split(/\s+/)[0]; 
+    
+    const correoYopmail = `${fakerNombre}.${fakerApellido}`
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9.]/g, '');
 
-    const correoYopmail = `${persona.correoPrefix}`
-    const correoYopmailCompleto = `${correoYopmail}@yopmail.com`
+    const correoYopmailCompleto = `${correoYopmail}@yopmail.com`;
 
     // ==========================================
     // FASE 1: SOLICITAR CUENTA FAMILIA
@@ -41,8 +48,7 @@ for (const persona of solicitantes) {
         label: 'Certificado de Nacimiento'
       })
 
-      // Si fixtures está en la raíz y tu test dentro de /tests:
-// Si fixtures está en la raíz y tu test dentro de /tests:
+     
       const filePath = path.resolve(__dirname, '../fixtures/FotoFamilia7.jpg');
       //const filePath = path.resolve(__dirname, '../fixtures/Evidencia.pdf');
 
@@ -74,8 +80,20 @@ for (const persona of solicitantes) {
       if (apellidoActual.trim() === '') {
         await apellidoField.fill(fakerApellido)
       } 
+       
+      const nombreField2 = page.locator('#SecondName')
+      const nombreActual2 = await nombreField2.inputValue()
+      if (nombreActual2.trim() === '') {
+        await nombreField2.fill(fakerNombre2)
+      }
+      
+      const apellidoField2 = page.locator('#SecondLastName')
+      const apellidoActual2 = await apellidoField2.inputValue()
+      if (apellidoActual2.trim() === '') {
+        await apellidoField2.fill(fakerApellido2)
+      } 
 
-      //OJO VALIDAR CUANDO CAMBIA IDIOMA
+            //OJO VALIDAR CUANDO CAMBIA IDIOMA
       const fechaField = page.locator('#Birthday input[placeholder="dd/mm/aaaa"]')
       const fechaActual = await fechaField.inputValue()
       if (fechaActual.trim() === '') {
@@ -113,7 +131,7 @@ for (const persona of solicitantes) {
       await expect(emailField).toBeVisible({ timeout: 20000 })
       await emailField.fill(correoYopmailCompleto)
       await emailField.blur()
-
+      await page.pause()
       const btnEnviarCodigo = page.getByRole('button', { name: 'Enviar código' })
       await expect(btnEnviarCodigo).toBeEnabled({ timeout: 30000 })
       await btnEnviarCodigo.click()
