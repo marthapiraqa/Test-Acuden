@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test'
 import { fakerES as faker } from '@faker-js/faker'
 import { obtenerCodigoYopmail } from '../utils/yopmail'
 import solicitantes from '../fixtures/solicitantes.json'
-import path from 'path'
 
 
 const remitenteEsperado = 'noreply@familia.pr.gov'
@@ -49,8 +48,8 @@ for (const persona of solicitantes) {
       })
 
      
-      const filePath = path.resolve(__dirname, '../fixtures/FotoFamilia7.jpg');
-      //const filePath = path.resolve(__dirname, '../fixtures/Evidencia.pdf');
+      const filePath =('fixtures/FotoFamilia7.jpg');
+      //const filePath =('fixtures/Evidencia.pdf');
 
       await page.setInputFiles('#FileUrlInput', filePath);
       await expect(page.locator('#FileUrlInput')).toHaveJSProperty('files.length', 1)
@@ -64,7 +63,7 @@ for (const persona of solicitantes) {
       ).toBeVisible({ timeout: 120000 })
 
       await expect(page.getByText('Primer nombre')).toBeVisible()
-    })
+         })
 
     //Se ingresa datos del Formulario
     await test.step('Completar formulario de datos personales', async () => {
