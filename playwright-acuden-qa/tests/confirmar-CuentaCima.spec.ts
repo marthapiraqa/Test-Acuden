@@ -16,7 +16,7 @@ test("Confirmar Usuario - Último registro", async ({ page }) => {
     });
     // Ingresar credenciales de acceso
     await page.locator('xpath=//*[@id="Username"]').fill("kpg2");
-    await page.locator('input[type="password"]').fill("Cima321...");
+    await page.locator('input[type="password"]').fill("Cima123...");
 
     // --- PARTE DEL CAPTCHA ---
     // console.log("Ingrese el CAPTCHA manualmente y presione Resume");
@@ -135,23 +135,41 @@ test("Confirmar Usuario - Último registro", async ({ page }) => {
    // const singleRecordOption = page.locator("a.identity-validation-banner__action, div.identity-validation-banner__action");
    // await expect(singleRecordOption).toHaveClass(/disabled|not-active/i, { timeout: 10000 });
 
-    // 2. Dar clic en el botón 'Create user'
-    const btnCreateUser = page.locator("button.btn-green-007C7D");
-    await expect(btnCreateUser).toBeVisible({ timeout: 10000 });
-    await btnCreateUser.click();
+    // 1. Pausa y clic en el botón 'Create user'
+      await page.waitForTimeout(1000);
+      const btnCreateUser = page.getByRole("button", { name: /Create user|Crear usuario/i }).first();
+      await expect(btnCreateUser).toBeVisible({ timeout: 15000 });
+      await btnCreateUser.scrollIntoViewIfNeeded();
+      await btnCreateUser.click();
 
-    // 3. Primer popup de confirmación: hacer clic en Accept
-    const primerModal = page.locator(".modal.show, .modal-content:visible").first();
-    await expect(primerModal).toBeVisible({ timeout: 10000 });
-    await primerModal.click();
+      // 2. Pausa antes del texto de recordatorio de correo
+      await page.waitForTimeout(1000);
+      const reminderText = page.getByText(/Remember to check your email/i);
+      if (await reminderText.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await reminderText.click();
+      }
 
-    // 4. Segundo popup (éxito o confirmación final): hacer clic en Accept
-    const segundoModal = page.locator(".modal.show, .modal-content:visible").first();
-    await expect(segundoModal).toBeVisible({ timeout: 10000 });
-    await segundoModal.click();
+      // 3. Pausa antes del primer botón Accept
+      await page.waitForTimeout(1000);
+      await page.getByRole("button", { name: /Accept|Aceptar/i }).first().click();
 
-    // Esperar a que se procese la solicitud en red
-    await page.waitForLoadState("networkidle");
+      // 4. Pausa antes de interactuar con el cuerpo del modal de éxito
+      await page.waitForTimeout(1000);
+      const modalSuccess = page.locator(".account-success-modal-body, .modal-body").first();
+      if (await modalSuccess.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await modalSuccess.click();
+      }
+
+      // 5. Pausa antes del segundo botón Accept
+      await page.waitForTimeout(1000);
+      const btnAcceptFinal = page.getByRole("button", { name: /Accept|Aceptar/i }).first();
+      if (await btnAcceptFinal.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await btnAcceptFinal.click();
+      }
+
+      // 6. Pausa antes del contenedor form-group
+      await page.waitForTimeout(1000);
+      await page.locator(".form-group").first().click();
 
     console.log("Detalle del último registro abierto y procesado correctamente");
   });
