@@ -1,0 +1,29 @@
+{
+  "name": "adsef-digital-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pruebas E2E de ADSEF Digital con Playwright Codegen y Page Object Model",
+  "scripts": {
+    "test:bdd": "node scripts/run.mjs bdd",
+    "bdd:generate": "node scripts/run.mjs bddgen",
+    "test:recording": "node scripts/run.mjs recording",
+    "test": "node scripts/run.mjs test",
+    "test:headed": "node scripts/run.mjs headed",
+    "test:ui": "node scripts/run.mjs ui",
+    "test:auth": "node scripts/run.mjs auth",
+    "codegen": "node scripts/run.mjs codegen",
+    "report": "node scripts/run.mjs report",
+    "typecheck": "tsc --noEmit",
+    "browsers": "node scripts/run.mjs browsers"
+  },
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^24.13.6",
+    "dotenv": "^18.0.3",
+    "playwright-bdd": "^9.2.1",
+    "typescript": "^5.9.3"
+  }
+}

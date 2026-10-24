@@ -1,0 +1,11 @@
+node_modules/
+.features-gen/
+.tools/
+.env
+.env.*
+!.env.example
+playwright/.auth/
+playwright-report/
+test-results/
+recordings/*
+!recordings/README.md
